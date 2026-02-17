@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Heal the Water</title>
+    <title>Врятуй воду</title>
     <style>
         /* --- Reset & Base --- */
         * {
@@ -208,13 +208,13 @@
 <body>
 
     <div id="overlay">
-        <h1 style="background:none; border:none; font-size: 2rem;">Heal the Water</h1>
+        <h1 style="background:none; border:none; font-size: 2rem;">Врятуй воду</h1>
         <p style="opacity:0.8; margin-top:10px;">Turn sound on</p>
-        <button id="start-btn">TAP TO START</button>
+        <button id="start-btn">ТАП АБИ ПОЧАТИ</button>
     </div>
 
     <header>
-        <h1>How can we save our water?</h1>
+        <h1>Як ми можемо зберігти нашу воду?</h1>
     </header>
 
     <div id="earth-container">
@@ -224,7 +224,7 @@
              onerror="this.style.display='none'"> </div>
 
     <div id="bubble-container"></div>
-    <div id="status">Health: 0%</div>
+    <div id="status">Водневий баланс: 0%</div>
 
     <script>
         /**
@@ -340,24 +340,23 @@
          */
         const MAX_BUBBLES = 6;
         const WORDS = [
-            { text: "Filtration", type: "good" },
-            { text: "Drip Irrigation", type: "good" },
-            { text: "Rain Harvest", type: "good" },
-            { text: "Clean Rivers", type: "good" },
-            { text: "Plant Trees", type: "good" },
-            { text: "Recycle", type: "good" },
-            { text: "No Plastic", type: "good" },
-            { text: "Save Water", type: "good" },
-            { text: "Eco-Friendly", type: "good" },
-            { text: "Solar Power", type: "good" },
-            { text: "Toxic Waste", type: "bad" },
-            { text: "Oil Spill", type: "bad" },
-            { text: "Microplastics", type: "bad" },
-            { text: "Running Tap", type: "bad" },
-            { text: "Pollution", type: "bad" },
-            { text: "Sewage", type: "bad" },
-            { text: "Chemicals", type: "bad" },
-            { text: "Littering", type: "bad" }
+            { text: "Фільтрація", type: "good" },
+            { text: "Крапельне зрошення", type: "good" },
+            { text: "Збір дощу", type: "good" },
+            { text: "Чисті річки", type: "good" },
+            { text: "Висаджування дерев", type: "good" },
+            { text: "Переробляти", type: "good" },
+            { text: "НІ пластику", type: "good" },
+            { text: "Збереження води", type: "good" },
+            { text: "Еко-Френдли", type: "good" },
+            { text: "Сонячна енергія", type: "good" },
+            { text: "Токсичні відходи", type: "bad" },
+            { text: "Розлив нафти", type: "bad" },
+            { text: "Мікропластик", type: "bad" },
+            { text: "Забруднення", type: "bad" },
+            { text: "Стічні води", type: "bad" },
+            { text: "Хімікати", type: "bad" },
+            { text: "Засмічення", type: "bad" }
         ];
 
         let health = 0;
@@ -545,4 +544,5 @@
 
     </script>
 </body>
+
 </html>
