@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Heal the Water</title>
+    <style>
+        /* --- Reset & Base --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #02040a; /* Deep space black */
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* --- Background: The Earth --- */
+        #earth-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85vmin; 
+            height: 85vmin;
+            z-index: 1;
+            border-radius: 50%;
+            overflow: hidden;
+            /* Fallback blue gradient in case image fails */
+            background: radial-gradient(circle at 30% 30%, #2b5a8e, #000);
+            box-shadow: 0 0 30px rgba(0, 100, 255, 0.2);
+            transition: all 2s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        #earth-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* Start grayscale and slightly dim */
+            filter: grayscale(100%) brightness(0.6); 
+            transition: filter 0.8s ease-out;
+            opacity: 1;
+        }
+
+        /* Victory State - Zoom and Brighten */
+        body.victory #earth-container {
+            transform: translate(-50%, -50%) scale(1.2); /* Zoom in */
+            box-shadow: 0 0 80px rgba(100, 200, 255, 0.8); /* Strong Glow */
+        }
+        
+        body.victory #earth-image {
+            filter: grayscale(0%) brightness(1.1) !important;
+        }
+
+        /* Shake animation for "Bad" clicks */
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        /* --- Header --- */
+        header {
+            position: absolute;
+            top: 5%;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+            transition: opacity 1s;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 1.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.5);
+            display: inline-block;
+            padding: 10px 25px;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #status {
+            position: absolute;
+            bottom: 5%;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            font-weight: bold;
+            z-index: 10;
+            pointer-events: none;
+            transition: opacity 1s;
+        }
+
+        /* --- Floating Word Bubbles --- */
+        #bubble-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            overflow: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            /* Big, tappable area */
+            padding: 18px 32px; 
+            border-radius: 60px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            /* GPU Acceleration hints */
+            will-change: transform, opacity;
+            
+            /* Modern Glassmorphism */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            color: white;
+            
+            transform: scale(0); 
+            animation: spawnPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .bubble[data-type="bad"] {
+            border-color: rgba(255, 80, 80, 0.4);
+            background: rgba(80, 0, 0, 0.5);
+        }
+        
+        .bubble[data-type="good"] {
+            border-color: rgba(80, 255, 200, 0.4);
+            background: rgba(0, 60, 20, 0.5);
+        }
+
+        .popping {
+            animation: popOut 0.2s ease-in forwards !important;
+            pointer-events: none;
+        }
+
+        @keyframes spawnPop {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes popOut {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        /* --- Start Overlay (Required for Audio) --- */
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            transition: opacity 0.5s;
+        }
+        #overlay button {
+            margin-top: 20px;
+            padding: 16px 40px;
+            font-size: 1.4rem;
+            border-radius: 50px;
+            border: none;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: #000;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(79, 172, 254, 0.6);
+            transform: scale(1);
+            transition: transform 0.2s;
+        }
+        #overlay button:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <h1 style="background:none; border:none; font-size: 2rem;">Heal the Water</h1>
+        <p style="opacity:0.8; margin-top:10px;">Turn sound on</p>
+        <button id="start-btn">TAP TO START</button>
+    </div>
+
+    <header>
+        <h1>How can we save our water?</h1>
+    </header>
+
+    <div id="earth-container">
+        <img id="earth-image" 
+             src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg" 
+             alt="Planet Earth"
+             onerror="this.style.display='none'"> </div>
+
+    <div id="bubble-container"></div>
+    <div id="status">Health: 0%</div>
+
+    <script>
+        /**
+         * AUDIO ENGINE
+         * We generate sound using Web Audio API to avoid broken external links.
+         */
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        let waterNoiseNode; // Stores the background noise
+
+        // 1. Generate Brown Noise (Water Sound)
+        function createWaterSound() {
+            if(!audioCtx) return;
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            // Fill with random noise (Brownian-ish approximation)
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5; // Gain compensation
+            }
+
+            waterNoiseNode = audioCtx.createBufferSource();
+            waterNoiseNode.buffer = noiseBuffer;
+            waterNoiseNode.loop = true;
+
+            // Lowpass filter to make it sound muffled/underwater
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400; // Deep rumble
+
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0.15; // Volume
+
+            waterNoiseNode.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            waterNoiseNode.start(0);
+        }
+
+        // 2. SFX Generator (Beeps)
+        function playTone(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'good') {
+                // Happy Chime (Sine wave with decay)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } else {
+                // Bad Buzz (Sawtooth)
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.linearRampToValueAtTime(80, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+        }
+
+        // 3. Victory Song Generator (Fanfare)
+        function playVictoryMusic() {
+            if (!audioCtx) return;
+            
+            // Stop water sound
+            if(waterNoiseNode) {
+                try { waterNoiseNode.stop(); } catch(e){}
+            }
+
+            const now = audioCtx.currentTime;
+            const notes = [
+                { f: 523.25, t: 0 },   // C5
+                { f: 659.25, t: 0.2 }, // E5
+                { f: 783.99, t: 0.4 }, // G5
+                { f: 1046.50, t: 0.6 },// C6
+                { f: 783.99, t: 0.9 }, // G5
+                { f: 1046.50, t: 1.2 } // C6 (Long)
+            ];
+
+            notes.forEach(note => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.frequency.value = note.f;
+                gain.gain.setValueAtTime(0.2, now + note.t);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + note.t + 0.6);
+                
+                osc.start(now + note.t);
+                osc.stop(now + note.t + 0.6);
+            });
+        }
+
+        /**
+         * GAME LOGIC
+         */
+        const MAX_BUBBLES = 6;
+        const WORDS = [
+            { text: "Filtration", type: "good" },
+            { text: "Drip Irrigation", type: "good" },
+            { text: "Rain Harvest", type: "good" },
+            { text: "Clean Rivers", type: "good" },
+            { text: "Plant Trees", type: "good" },
+            { text: "Recycle", type: "good" },
+            { text: "No Plastic", type: "good" },
+            { text: "Save Water", type: "good" },
+            { text: "Eco-Friendly", type: "good" },
+            { text: "Solar Power", type: "good" },
+            { text: "Toxic Waste", type: "bad" },
+            { text: "Oil Spill", type: "bad" },
+            { text: "Microplastics", type: "bad" },
+            { text: "Running Tap", type: "bad" },
+            { text: "Pollution", type: "bad" },
+            { text: "Sewage", type: "bad" },
+            { text: "Chemicals", type: "bad" },
+            { text: "Littering", type: "bad" }
+        ];
+
+        let health = 0;
+        let isVictory = false;
+        let bubbles = [];
+        const container = document.getElementById('bubble-container');
+        const earthImage = document.getElementById('earth-image');
+        const earthContainer = document.getElementById('earth-container');
+        const statusText = document.getElementById('status');
+
+        // Start Button Logic
+        document.getElementById('start-btn').addEventListener('click', () => {
+            // Init Audio Context on user gesture
+            audioCtx = new AudioContext();
+            audioCtx.resume().then(() => {
+                createWaterSound(); // Start background noise
+                document.getElementById('overlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('overlay').style.display = 'none';
+                    initGame();
+                }, 500);
+            });
+        });
+
+        function initGame() {
+            for (let i = 0; i < MAX_BUBBLES; i++) {
+                spawnBubble();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateEarth() {
+            if (isVictory) return;
+
+            if (health < 0) health = 0;
+            if (health >= 100) {
+                health = 100;
+                triggerVictory();
+                return;
+            }
+
+            // Map Health to Grayscale (0% health = 100% gray)
+            const grayValue = 100 - health;
+            // brightness goes from 0.6 to 1.0
+            const brightValue = 0.6 + (health * 0.004); 
+            
+            earthImage.style.filter = `grayscale(${grayValue}%) brightness(${brightValue})`;
+            statusText.innerText = `Health: ${health}%`;
+        }
+
+        function getRandomWord() {
+            // "90% Fix": If player is close to winning (health > 70), 
+            // force at least one good bubble if none exist.
+            const goodBubbles = bubbles.filter(b => b.type === 'good').length;
+            
+            if (health >= 70 && goodBubbles === 0) {
+                const goodWords = WORDS.filter(w => w.type === 'good');
+                return goodWords[Math.floor(Math.random() * goodWords.length)];
+            }
+            return WORDS[Math.floor(Math.random() * WORDS.length)];
+        }
+
+        function spawnBubble() {
+            if (bubbles.length >= MAX_BUBBLES || isVictory) return;
+
+            const wordObj = getRandomWord();
+            const el = document.createElement('div');
+            el.classList.add('bubble');
+            el.innerText = wordObj.text;
+            el.dataset.type = wordObj.type;
+
+            container.appendChild(el);
+            
+            const width = el.offsetWidth;
+            const height = el.offsetHeight;
+
+            let x = Math.random() * (window.innerWidth - width);
+            let y = Math.random() * (window.innerHeight - height);
+
+            // Random Velocity
+            let dx = (Math.random() - 0.5) * 2.0; 
+            let dy = (Math.random() - 0.5) * 2.0;
+            if (Math.abs(dx) < 0.3) dx = 0.5;
+            if (Math.abs(dy) < 0.3) dy = 0.5;
+
+            const bubbleObj = { el, x, y, dx, dy, width, height, type: wordObj.type };
+            bubbles.push(bubbleObj);
+
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+
+            el.addEventListener('pointerdown', (e) => handleInteraction(e, bubbleObj));
+        }
+
+        function handleInteraction(e, bubbleObj) {
+            e.preventDefault();
+            if(isVictory) return;
+
+            // Remove clicked
+            const index = bubbles.indexOf(bubbleObj);
+            if (index > -1) bubbles.splice(index, 1);
+
+            if (bubbleObj.type === 'good') {
+                health += 10;
+                playTone('good');
+            } else {
+                health -= 10;
+                playTone('bad');
+                earthContainer.classList.remove('shake');
+                void earthContainer.offsetWidth; 
+                earthContainer.classList.add('shake');
+            }
+
+            updateEarth();
+
+            bubbleObj.el.classList.add('popping');
+            setTimeout(() => { if(bubbleObj.el.parentNode) bubbleObj.el.remove(); }, 200);
+
+            // Cycle board: Remove one random extra bubble to keep fresh
+            if(bubbles.length > 2) {
+                const rnd = Math.floor(Math.random() * bubbles.length);
+                const extra = bubbles[rnd];
+                bubbles.splice(rnd, 1);
+                extra.el.classList.add('popping');
+                setTimeout(() => { if(extra.el.parentNode) extra.el.remove(); }, 200);
+            }
+
+            // Respawn
+            setTimeout(spawnBubble, 100);
+            setTimeout(spawnBubble, 300);
+        }
+
+        function triggerVictory() {
+            if(isVictory) return;
+            isVictory = true;
+            document.body.classList.add('victory');
+            
+            // Remove all bubbles
+            bubbles.forEach(b => {
+                b.el.classList.add('popping');
+                setTimeout(() => b.el.remove(), 200);
+            });
+            bubbles = [];
+
+            // UI
+            document.querySelector('header').style.opacity = '0';
+            statusText.innerText = "THE WATER IS HEALED!";
+            statusText.style.color = "#7fffd4";
+            statusText.style.fontSize = "1.8rem";
+            statusText.style.bottom = "15%";
+            statusText.style.textShadow = "0 0 20px #7fffd4";
+            
+            // Audio
+            playVictoryMusic();
+        }
+
+        function gameLoop() {
+            if (isVictory) return;
+
+            const maxX = window.innerWidth;
+            const maxY = window.innerHeight;
+
+            bubbles.forEach(b => {
+                b.x += b.dx;
+                b.y += b.dy;
+
+                // Bounce
+                if (b.x <= 0 || b.x + b.width >= maxX) {
+                    b.dx *= -1;
+                    b.x = Math.max(0, Math.min(b.x, maxX - b.width));
+                }
+                if (b.y <= 0 || b.y + b.height >= maxY) {
+                    b.dy *= -1;
+                    b.y = Math.max(0, Math.min(b.y, maxY - b.height));
+                }
+
+                b.el.style.left = b.x + 'px';
+                b.el.style.top = b.y + 'px';
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('resize', () => {});
+
+    </script>
+</body>
+</html>
